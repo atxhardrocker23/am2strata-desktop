@@ -164,6 +164,7 @@ pub fn stop_server_processes() {
         "am2strata-run.exe",
         "am2strata-media.exe",
         "am2strata-workshop.exe",
+        "strata.exe",
         "strata-poly.exe",
         "strata-vision.exe",
     ] {
@@ -185,7 +186,8 @@ pub fn switch_model(model_id: &str) -> Result<String, String> {
 
     let url = format!("http://{SERVER_HOST}:{SERVER_PORT}/api/models/load");
     let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(120)))
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(300)))
         .build()
         .into();
 
@@ -194,10 +196,19 @@ pub fn switch_model(model_id: &str) -> Result<String, String> {
         .post(&url)
         .send_json(&payload)
         .map_err(|e| format!("Failed to switch model: {e}"))?;
+    let status = resp.status().as_u16();
     let val = resp
         .body_mut()
         .read_json::<serde_json::Value>()
         .unwrap_or_default();
+    if status >= 400 {
+        let msg = val
+            .pointer("/error/message")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .unwrap_or("unknown server error");
+        return Err(format!("Failed to switch model (HTTP {status}): {msg}"));
+    }
     let loaded_id = val
         .pointer("/model/id")
         .and_then(|v| v.as_str())
