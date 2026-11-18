@@ -24,7 +24,7 @@ pub const WINGET_LINKS_BIN: &str = r"C:\Users\Kenny\AppData\Local\Microsoft\WinG
 pub const SERVER_HOST: &str = "127.0.0.1";
 pub const SERVER_PORT: u16 = 8088;
 pub const SERVER_URL: &str = "http://127.0.0.1:8088/";
-pub const DEFAULT_MODEL: &str = "cyber-tiel-coder-nanoplus";
+pub const DEFAULT_MODEL: &str = "cyber-tiel-coder-miniplus";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfigEntry {
@@ -117,9 +117,18 @@ pub fn start_server_headless(model_override: Option<&str>) -> Result<(), String>
         "{POPPLER_BIN};{CUDA_BIN};{CUDA_BIN_X64};{ANDROID_PLATFORM_TOOLS};{ANDROID_CLI_BIN};{WINGET_LINKS_BIN};{existing_path}"
     );
 
+    let vision_tmp = format!(r"{BASE_DIR}\cache\vision-tmp");
+    let _ = fs::create_dir_all(&vision_tmp);
+
     let mut cmd = Command::new(AM2_EXE);
     cmd.current_dir(AM2_DIR)
         .env("PATH", new_path)
+        .env("CUDA_MODULE_LOADING", "LAZY")
+        .env("CUDA_DEVICE_MAX_CONNECTIONS", "8")
+        .env("STRATA_SLOTS_WARP", "1")
+        .env("STRATA_POLY_STREAM_STAGE", "1")
+        .env("STRATA_POLY_PIN_EXPERTS", "2048")
+        .env("STRATA_VISION_TMP", &vision_tmp)
         .env("AM2STRATA_MEDIA_EXE", AM2_MEDIA_EXE)
         .env("AM2STRATA_WORKSHOP_EXE", AM2_WORKSHOP_EXE)
         .env("MOLD_HOME", MOLD_HOME_DIR)
